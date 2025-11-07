@@ -2,7 +2,7 @@ name: Pipeline Java com Ambientes
 
 on:
   push:
-    branches: [ "develop", "main" ]
+    branches: [ "master" ]
   workflow_dispatch:
 
 jobs:
