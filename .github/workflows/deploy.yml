@@ -1,58 +1,68 @@
+# Nome do workflow (aparece na aba Actions do GitHub)
 name: Pipeline Java com Ambientes
 
+# Define os eventos que disparam o workflow
 on:
   push:
-    branches: [ "master" ]
-  workflow_dispatch:
+    branches: [ "master" ]  # Executa automaticamente quando há push na branch master
+  workflow_dispatch:        # Permite execução manual do pipeline
 
 jobs:
+  # -------------------- JOB 1: BUILD --------------------
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest  # Usa uma máquina Linux do GitHub Actions
     steps:
       - name: Checkout do código
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4  # Baixa o código do repositório para o ambiente
 
       - name: Configurar Java
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v4  # Instala o JDK no ambiente
         with:
-          distribution: temurin
-          java-version: 21
+          distribution: temurin      # Define a distribuição do JDK (Eclipse Temurin)
+          java-version: 21           # Define a versão do Java
 
       - name: Compilar e testar
-        run: mvn clean verify
+        run: mvn clean verify         # Executa a compilação e os testes automatizados com Maven
 
       - name: Gerar artefato
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4  # Salva o arquivo .jar gerado
         with:
-          name: app
-          path: target/*.jar
+          name: app                     # Nome do artefato (usado para download depois)
+          path: target/*.jar            # Caminho onde o Maven gera o .jar
 
+  # -------------------- JOB 2: DEPLOY EM DESENVOLVIMENTO --------------------
   deploy-dev:
-    needs: build
+    needs: build                        # Executa apenas após o job "build" ter sucesso
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/develop'
-    environment: development
+    if: github.ref == 'refs/heads/master'  # Condição: executa apenas se o push for na branch master
+    environment: development             # Define o ambiente (pode configurar proteções no GitHub)
     steps:
       - name: Baixar artefato
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v4  # Recupera o .jar gerado no job build
         with:
           name: app
-      - name: Deploy em ambiente de desenvolvimento
-        run: echo "Aplicação implantada em DEV"
 
+      - name: Deploy em ambiente de desenvolvimento
+        run: echo "Aplicação implantada em DEV"  # Aqui entrariam os comandos de deploy real (ex.: scp, kubectl, etc.)
+
+  # -------------------- JOB 3: DEPLOY EM PRODUÇÃO --------------------
   deploy-prod:
-    needs: build
+    needs: build                        # Também depende do job build
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/master'  # Mantém a mesma branch (master) — poderia mudar para main se desejar separar
     environment:
-      name: production
-      url: https://meuapp-producao.com
+      name: production                   # Nome do ambiente de produção
+      url: https://meuapp-producao.com   # URL exibida na aba de ambientes
     steps:
       - name: Baixar artefato
         uses: actions/download-artifact@v4
         with:
           name: app
+
       - name: Aprovação manual
         run: echo "Aguardando aprovação antes do deploy em produção"
+        # No GitHub, é possível configurar aprovação manual via ambientes protegidos (Settings > Environments)
+
       - name: Deploy em ambiente de produção
         run: echo "Aplicação implantada em PRODUÇÃO"
+        # Aqui seriam inseridos comandos reais de deploy para servidores ou nuvem
