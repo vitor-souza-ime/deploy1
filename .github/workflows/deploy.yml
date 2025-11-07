@@ -1,0 +1,58 @@
+name: Pipeline Java com Ambientes
+
+on:
+  push:
+    branches: [ "develop", "main" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v4
+
+      - name: Configurar Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Compilar e testar
+        run: mvn clean verify
+
+      - name: Gerar artefato
+        uses: actions/upload-artifact@v4
+        with:
+          name: app
+          path: target/*.jar
+
+  deploy-dev:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/develop'
+    environment: development
+    steps:
+      - name: Baixar artefato
+        uses: actions/download-artifact@v4
+        with:
+          name: app
+      - name: Deploy em ambiente de desenvolvimento
+        run: echo "Aplicação implantada em DEV"
+
+  deploy-prod:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    environment:
+      name: production
+      url: https://meuapp-producao.com
+    steps:
+      - name: Baixar artefato
+        uses: actions/download-artifact@v4
+        with:
+          name: app
+      - name: Aprovação manual
+        run: echo "Aguardando aprovação antes do deploy em produção"
+      - name: Deploy em ambiente de produção
+        run: echo "Aplicação implantada em PRODUÇÃO"
